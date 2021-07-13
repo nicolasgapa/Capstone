@@ -14,32 +14,20 @@ from scipy import signal
 
 
 # Functions.
-def convert_to_signal(csv_file):
+def convert_to_signal(df):
     """
     Converts the original (unevenly spaced) data to an equally-spaced time series (a signal).
 
-    :param csv_file: Original radiation file with two columns: time since last event (in s) and energy (kEv).
+    :param df: Radiation data with two columns: time (in s) and energy (kEv).
     :return: two vectors: times (since the start of the simulation) and energy levels (in kEv).
 
     """
-    # Open csv file data.
-    df = pd.read_csv(csv_file, header=None)
-
-    # Compute the actual time of each row (in seconds).
-    time_sum, times = 0, []
-    for row in df[0]:
-        time_sum += row
-        times.append(time_sum / 1e6)
-
-    # Add the times column to the dataframe.
-    df['times'] = times
-
     # Average or round values.
     average = True
     if average:
         new_df = []
         for index, row in df.iterrows():
-            raw = row['times']
+            raw = row['time']
             rounded = round(raw, 3)
             if raw - rounded < 0:
                 up = 1 - abs(raw - rounded) * 1000
@@ -55,8 +43,8 @@ def convert_to_signal(csv_file):
         df1 = pd.DataFrame(np.array(new_df)).astype(float)
         df1 = df1.groupby(0).mean()
     else:
-        df['rounded_times'] = [round(t, 3) for t in times]
-        df1 = df.groupby('rounded_times').mean()
+        df['rounded_time'] = [round(t, 3) for t in df['time']]
+        df1 = df.groupby('rounded_time').mean()
 
     # Build signal.
     times, radiation_levels = df1.index, df1[1]
@@ -66,11 +54,14 @@ def convert_to_signal(csv_file):
     return sig
 
 
-def detrend(x_values, y_values, order):
+def detrend(x_values, y_values, order, absolute=False):
     # Detrend.
     poly_coef = np.polyfit(x_values, y_values, order)  # Degree of the polynomial.
     poly = np.polyval(poly_coef, x_values)  # In this case, y-axis is the TEC vector.
-    polyfit_tec = y_values - poly
+    if absolute:
+        polyfit_tec = abs(y_values - poly)
+    else:
+        polyfit_tec = y_values - poly
     return polyfit_tec
 
 
@@ -118,7 +109,7 @@ def detrending_high_pass(y_values, cutoff=0.1, order=5):
     return detrended_tec
 
 
-def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False):
+def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False, det=False):
     """
     Detrend and filter a signal using a double butterworth filter.
 
@@ -128,12 +119,17 @@ def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False):
     :param n: Rolling mean window size.
     :param filter_order: Order of the butterworth filter.
     :param plot: Plot (True) or not (False).
+    :param det: Detrend the data.
     :return: x, y: Two vectors containing time vs. filtered/detrended energy.
     """
 
     # Detrend the data.
     times, radiation_levels = list(df['time']), list(df['energy'])
-    detrended = signal.detrend(radiation_levels, type='linear')
+    if det:
+        detrended = detrend(times, radiation_levels, 1)
+        filtered = detrended
+    else:
+        filtered = radiation_levels
 
     # Fix low == 0 or high == 0.
     if low_cutoff == 0:
@@ -143,20 +139,22 @@ def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False):
 
     # Filter the data.
     if low_cutoff is not None:
-        detrended = detrending_high_pass(detrended, cutoff=low_cutoff, order=filter_order)
+        filtered = detrending_high_pass(filtered, cutoff=low_cutoff, order=filter_order)
     if high_cutoff is not None:
-        detrended = detrending_low_pass(detrended, cutoff=high_cutoff, order=filter_order)
+        filtered = detrending_low_pass(filtered, cutoff=high_cutoff, order=filter_order)
 
     # Using abs values.
     x = times
-    y = pd.Series([abs(d) for d in detrended]).rolling(n).mean()
+    if det:
+        detrended = detrend(x, filtered, 1, absolute=True)
+    y = pd.Series(filtered).rolling(n).mean()
 
     # Plot.
     if plot:
         plt.plot(x, y)
         plt.show()
 
-    return x, y
+    return list(x)[n-1:], list(y)[n-1:]
 
 # sig = convert_to_signal('data\\training\\104902.csv')
 # butterworth(sig, 0, 1, plot=True)
