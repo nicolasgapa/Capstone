@@ -120,14 +120,15 @@ def detrending_high_pass(y_values, cutoff=0.1, order=5):
 
 def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False):
     """
+    Detrend and filter a signal using a double butterworth filter.
 
-    :param df:
-    :param low_cutoff:
-    :param high_cutoff:
-    :param n:
-    :param filter_order:
-    :param plot:
-    :return:
+    :param df: Data (including a column called 'times' with the actual time of each measurement).
+    :param low_cutoff: Low buttertworth filter cutoff.
+    :param high_cutoff: High butterworth filter cutoff.
+    :param n: Rolling mean window size.
+    :param filter_order: Order of the butterworth filter.
+    :param plot: Plot (True) or not (False).
+    :return: x, y: Two vectors containing time vs. filtered/detrended energy.
     """
 
     # Detrend the data.
