@@ -146,7 +146,7 @@ def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False, d
     # Using abs values.
     x = times
     if det:
-        detrended = detrend(x, filtered, 1, absolute=True)
+        filtered = detrend(x, filtered, 1, absolute=True)
     y = pd.Series(filtered).rolling(n).mean()
 
     # Plot.
