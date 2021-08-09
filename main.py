@@ -16,10 +16,10 @@ import pandas as pd
 from signal_processing import butterworth, detrend
 
 # Inputs.
-file = "data\\training\\107901.csv"
+file = "data\\training\\107309.csv"
 neural_networks = [network_4(6, 9910), network_5(6, 9910), network_7(6, 9910)]
 weights = ['data\\weights\\weights_4.h5', 'data\\weights\\weights_5.h5', 'data\\weights\\weights_7.h5']
-signal_processing_interval = 5
+signal_processing_interval = 4
 average_confidence = 5
 exp_power = 8
 max_window_size = 40
@@ -41,6 +41,7 @@ for row in df[0]:
     times.append(time_sum / 1e6)
 df['time'] = times
 end_time = max(times)
+# end_time = 180
 
 # Create plots.
 fig = plt.figure(constrained_layout=True)
@@ -119,12 +120,13 @@ for e, t in enumerate(range(start_time, ceil(end_time), 1), 0):
     means.append(mean)
 
     # Print summary.
-    if mean >= confidence_threshold:
+    if mean >= confidence_threshold**exp_power:
         ax4.text(0.1, 0.9 - 0.035 * summary_ct,
                  'Source detected at time {}s.: {}.'.format(round(t, 1), sources[source]), size=9)
         summary_ct += 1
         if summary_ct * 0.035 >= 0.9:
             ax4.clear()
+            ax4.axis('off')
             ax4.text(0.35, 0.95, 'Summary:')
 
     # Plot.
@@ -174,12 +176,12 @@ for e, t in enumerate(range(start_time, ceil(end_time), 1), 0):
                      size=9)
             if summary_ct * 0.035 >= 0.9:
                 ax4.clear()
+                ax4.axis('off')
                 ax4.text(0.35, 0.95, 'Summary:')
             summary_ct += 1
-
         ax3.set_ylim([0, max(200, local_max_ys)])
 
-        # Reset the mean every minute.
+        # Reset the mean every 30 seconds.
         if t % 60 == 0:
             signal_mean = 0
 

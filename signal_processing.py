@@ -123,13 +123,28 @@ def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False, d
     :return: x, y: Two vectors containing time vs. filtered/detrended energy.
     """
 
-    # Detrend the data.
+    # Plot original data.
     times, radiation_levels = list(df['time']), list(df['energy'])
+    if plot:
+        plt.plot(times, radiation_levels, linewidth=0.1)
+        plt.xlabel('Time (s)')
+        plt.ylabel('Energy (kEv)')
+        plt.title('Raw Data - Uranium 235 Simulation')
+        plt.show()
+
+    # Detrend the data.
     if det:
         detrended = detrend(times, radiation_levels, 1)
         filtered = detrended
     else:
         filtered = radiation_levels
+
+    # Plot detrended data.
+    if plot:
+        plt.plot(times, filtered, linewidth=0.1)
+        plt.xlabel('Time (s)')
+        plt.ylabel('Detrended Energy (kEv)')
+        plt.show()
 
     # Fix low == 0 or high == 0.
     if low_cutoff == 0:
@@ -154,7 +169,31 @@ def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False, d
         plt.plot(x, y)
         plt.show()
 
-    return list(x)[n-1:], list(y)[n-1:]
+    return list(x)[n - 1:], list(y)[n - 1:]
 
-# sig = convert_to_signal('data\\training\\104902.csv')
-# butterworth(sig, 0, 1, plot=True)
+
+def add_time_column(df):
+    """
+    Takes the raw data and adds a column with the actual time ('time')
+
+    :param df: Dataframe containing the original data.
+    :return: Updated df.
+    """
+
+    # Compute the actual time of each row (in seconds).
+    time_sum, times = 0, []
+    for row in df[0]:
+        time_sum += row
+        times.append(time_sum / 1e6)
+
+    # Add the times column to the dataframe.
+    df['time'] = times
+
+    # Return
+    return df
+
+
+# df = pd.read_csv('data\\training\\107309.csv', header=None)
+# df = add_time_column(df)
+# df.columns = [0, 'energy', 'time']
+# butterworth(df, 0, 1, plot=True, det=True)
