@@ -58,10 +58,9 @@ def detrend(x_values, y_values, order, absolute=False):
     # Detrend.
     poly_coef = np.polyfit(x_values, y_values, order)  # Degree of the polynomial.
     poly = np.polyval(poly_coef, x_values)  # In this case, y-axis is the TEC vector.
+    polyfit_tec = y_values - poly
     if absolute:
-        polyfit_tec = abs(y_values - poly)
-    else:
-        polyfit_tec = y_values - poly
+        polyfit_tec = abs(polyfit_tec)
     return polyfit_tec
 
 
@@ -87,7 +86,7 @@ def detrending_low_pass(y_values, cutoff=10, order=5):
     return detrended_tec
 
 
-# Low pass butterworth.
+# High pass butterworth.
 def detrending_high_pass(y_values, cutoff=0.1, order=5):
     """"
     Function: Detrend the data and use a butterworth filter.
@@ -109,7 +108,7 @@ def detrending_high_pass(y_values, cutoff=0.1, order=5):
     return detrended_tec
 
 
-def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False, det=False):
+def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False, det=False, source=''):
     """
     Detrend and filter a signal using a double butterworth filter.
 
@@ -120,6 +119,7 @@ def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False, d
     :param filter_order: Order of the butterworth filter.
     :param plot: Plot (True) or not (False).
     :param det: Detrend the data.
+    :param source: Optional - Name of the source (e.g., 'Uranium-235').
     :return: x, y: Two vectors containing time vs. filtered/detrended energy.
     """
 
@@ -129,7 +129,7 @@ def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False, d
         plt.plot(times, radiation_levels, linewidth=0.1)
         plt.xlabel('Time (s)')
         plt.ylabel('Energy (kEv)')
-        plt.title('Raw Data - Uranium 235 Simulation')
+        plt.title('Raw Data - {} Simulation'.format(source))
         plt.show()
 
     # Detrend the data.
@@ -161,12 +161,19 @@ def butterworth(df, low_cutoff, high_cutoff, n=10, filter_order=5, plot=False, d
     # Using abs values.
     x = times
     if det:
-        filtered = detrend(x, filtered, 1, absolute=True)
+        filtered = detrend(x, filtered, 1, absolute=False)
+
+    # Determine the deviation form the mean.
     y = pd.Series(filtered).rolling(n).mean()
+    y = abs(y)
 
     # Plot.
     if plot:
-        plt.plot(x, y)
+        plt.plot(x, y, linewidth=0.4)
+        plt.xlabel('Time (s)')
+        plt.ylabel('Energy (kEv)')
+        plt.suptitle('Filtered Data - {} Simulation'.format(source))
+        plt.title('Butterworth passband between 0 Hz and 1 Hz.')
         plt.show()
 
     return list(x)[n - 1:], list(y)[n - 1:]
@@ -193,7 +200,10 @@ def add_time_column(df):
     return df
 
 
-# df = pd.read_csv('data\\training\\107309.csv', header=None)
+# Save wavelet csv.
+# for i in range(104900, ):
+# i = 107309
+# df = pd.read_csv('data\\training\\{}.csv'.format(i), header=None)
 # df = add_time_column(df)
-# df.columns = [0, 'energy', 'time']
-# butterworth(df, 0, 1, plot=True, det=True)
+# sig = convert_to_signal(df)
+# sig.to_csv('data\\wavelet_csv\\{}.csv'.format(i), header=False, index=False)
